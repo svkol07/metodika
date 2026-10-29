@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Детектив Методики — Интерактивный Тренажер</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow-x: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0f1e; color: #fff; }
+  .animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: linear-gradient(135deg, #0a0f1e 0%, #1a1f3a 50%, #0a0f1e 100%); overflow: hidden; }
+  .animated-bg::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 20% 30%, rgba(0, 229, 255, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(176, 102, 255, 0.1) 0%, transparent 50%); animation: bgPulse 8s ease-in-out infinite; }
+  @keyframes bgPulse { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.1) rotate(180deg); } }
+  .grid-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px); background-size: 50px 50px; animation: gridMove 20s linear infinite; }
+  @keyframes gridMove { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+
+  .top-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: rgba(10, 15, 30, 0.95); border-bottom: 1px solid rgba(0, 229, 255, 0.3); backdrop-filter: blur(10px); flex-wrap: wrap; gap: 10px; }
+  .game-title { font-size: 22px; font-weight: 700; letter-spacing: 1px; background: linear-gradient(90deg, #00e5ff, #b066ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .stats-container { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .token-display { font-size: 18px; font-weight: 700; color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); display: flex; align-items: center; gap: 8px; }
+  .token-icon { width: 28px; height: 28px; filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+  .hearts-container { display: flex; gap: 6px; align-items: center; }
+  .heart-icon { width: 28px; height: 28px; filter: grayscale(100%) brightness(0.4) drop-shadow(0 0 5px rgba(255, 60, 100, 0.5)); transition: all 0.4s ease; }
+  .heart-icon.active { filter: brightness(1) drop-shadow(0 0 15px rgba(255, 60, 100, 0.8)); }
+  .heart-icon.lost { animation: heartBreak 0.6s ease; }
+  @keyframes heartBreak { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.4) rotate(15deg); } }
+  .combo-display { font-size: 16px; font-weight: 700; color: #ff9500; text-shadow: 0 0 10px rgba(255, 149, 0, 0.6); display: none; align-items: center; gap: 8px; }
+  .combo-display.show { display: flex; animation: comboPop 0.4s ease; }
+  .combo-icon { width: 24px; height: 24px; filter: drop-shadow(0 0 8px rgba(255, 149, 0, 0.8)); }
+  @keyframes comboPop { 0% { transform: scale(0.5); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  .restart-btn { padding: 8px 16px; background: rgba(176, 102, 255, 0.2); border: 1px solid rgba(176, 102, 255, 0.5); color: #fff; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s ease; }
+  .restart-btn:hover { background: rgba(176, 102, 255, 0.4); box-shadow: 0 0 20px rgba(176, 102, 255, 0.5); }
+
+  .main-container { position: relative; z-index: 5; display: flex; height: calc(100vh - 70px); margin-top: 70px; padding: 20px; gap: 20px; }
+  .center-panel { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .question-card { width: 100%; max-width: 900px; background: rgba(15, 20, 45, 0.8); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 20px; padding: 30px; backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); max-height: 85vh; overflow-y: auto; }
+  .question-card::-webkit-scrollbar { width: 6px; }
+  .question-card::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.3); border-radius: 3px; }
+  
+  .case-badge { display: inline-block; padding: 5px 14px; background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 20px; font-size: 12px; color: #00e5ff; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; font-weight: 600; }
+  .question-number { font-size: 14px; color: #b066ff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; font-weight: 600; }
+  .question-text { font-size: 22px; line-height: 1.5; margin-bottom: 24px; font-weight: 500; color: #fff; }
+  .question-instruction { font-size: 16px; color: #8aa8c8; margin-bottom: 20px; font-style: italic; padding-left: 14px; border-left: 3px solid rgba(176, 102, 255, 0.5); }
+
+  .boss-timer { margin-bottom: 20px; padding: 12px 16px; background: rgba(255, 60, 100, 0.15); border: 1px solid rgba(255, 60, 100, 0.5); border-radius: 12px; display: none; }
+  .boss-timer.show { display: block; animation: fadeIn 0.3s ease; }
+  .boss-timer-label { font-size: 13px; color: #ff3c64; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  .boss-timer-bar { width: 100%; height: 8px; background: rgba(0, 0, 0, 0.4); border-radius: 4px; overflow: hidden; }
+  .boss-timer-fill { height: 100%; background: linear-gradient(90deg, #ff3c64, #ff9500, #00ff88); transition: width 0.1s linear; }
+  .boss-timer-text { font-size: 16px; font-weight: 700; color: #ff3c64; margin-top: 4px; text-align: center; }
+
+  .side-panel { width: 260px; background: rgba(15, 20, 45, 0.8); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 20px; padding: 24px; backdrop-filter: blur(20px); display: flex; flex-direction: column; }
+  .side-panel-title { font-size: 16px; font-weight: 700; color: #00e5ff; margin-bottom: 20px; text-align: center; letter-spacing: 1px; }
+  .clue-board { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .clue-slot { width: 100%; height: 70px; background: rgba(0, 0, 0, 0.4); border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 12px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; transition: all 0.5s ease; }
+  .clue-slot img { width: 55px; height: 55px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.6)); }
+  .clue-slot.filled { border: 2px solid rgba(0, 255, 136, 0.6); background: rgba(0, 255, 136, 0.15); animation: cluePop 0.6s ease; }
+  .clue-slot.filled img { filter: drop-shadow(0 0 12px rgba(0, 255, 136, 0.9)); }
+  .clue-slot.empty { opacity: 0.4; }
+  .clue-slot-label { position: absolute; bottom: 4px; font-size: 9px; color: rgba(255, 255, 255, 0.6); letter-spacing: 1px; text-transform: uppercase; }
+  @keyframes cluePop { 0% { transform: scale(0) rotate(-180deg); } 100% { transform: scale(1) rotate(0); } }
+
+  .dragdrop-container { display: flex; flex-direction: column; gap: 20px; }
+  .drag-instruction { font-size: 14px; color: #ffd700; margin-bottom: 10px; text-align: center; background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.3); }
+  .drop-zones { display: flex; flex-direction: column; gap: 16px; }
+  .drop-zone { background: rgba(0, 0, 0, 0.3); border: 2px dashed rgba(0, 229, 255, 0.3); border-radius: 12px; padding: 16px; min-height: 80px; transition: all 0.3s ease; }
+  .drop-zone.drag-over { background: rgba(0, 229, 255, 0.15); border-color: #00e5ff; transform: scale(1.02); }
+  .drop-zone.correct { border-color: #00ff88; background: rgba(0, 255, 136, 0.1); }
+  .drop-zone.wrong { border-color: #ff3c64; background: rgba(255, 60, 100, 0.1); }
+  .drop-zone-title { font-size: 15px; font-weight: 700; color: #00e5ff; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px; }
+  .dropped-items { display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; }
+  
+  .draggable-pool { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+  .draggable-item { padding: 10px 16px; background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; cursor: grab; font-size: 14px; font-weight: 500; transition: all 0.2s ease; user-select: none; }
+  .draggable-item:hover { background: rgba(0, 229, 255, 0.3); transform: translateY(-2px); }
+  .draggable-item:active { cursor: grabbing; }
+  .draggable-item.selected { background: #ffd700; color: #000; border-color: #ffd700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); transform: scale(1.05); }
+  .draggable-item.placed { opacity: 0.5; cursor: default; background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+
+  .hints-container { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  .hint-btn { flex: 1; min-width: 200px; padding: 12px 16px; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 10px; color: #ffd700; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .hint-btn img { width: 20px; height: 20px; filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.6)); }
+  .hint-btn:hover:not(:disabled) { background: rgba(255, 215, 0, 0.25); transform: translateY(-2px); }
+  .hint-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+  .hint-text { margin-top: 16px; padding: 14px; background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.4); border-radius: 10px; color: #b0ffcc; font-size: 15px; display: none; animation: fadeIn 0.3s ease; }
+  .hint-text.show { display: block; }
+
+  .checkbox-list, .radio-list { display: flex; flex-direction: column; gap: 12px; }
+  .checkbox-item, .radio-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 18px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; cursor: pointer; transition: all 0.25s ease; }
+  .checkbox-item:hover:not(.disabled), .radio-item:hover:not(.disabled) { background: rgba(0, 229, 255, 0.1); border-color: rgba(0, 229, 255, 0.5); }
+  .checkbox-item.selected, .radio-item.selected { background: rgba(0, 229, 255, 0.2); border-color: #00e5ff; }
+  .checkbox-item.correct, .radio-item.correct { background: rgba(0, 255, 136, 0.2); border-color: #00ff88; }
+  .checkbox-item.wrong, .radio-item.wrong { background: rgba(255, 60, 100, 0.2); border-color: #ff3c64; }
+  .checkbox-item.disabled, .radio-item.disabled { cursor: not-allowed; opacity: 0.7; }
+  .checkbox-box { width: 24px; height: 24px; min-width: 24px; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: 700; transition: all 0.2s ease; margin-top: 2px; }
+  .radio-circle { width: 24px; height: 24px; min-width: 24px; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; margin-top: 2px; }
+  .radio-circle::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: transparent; transition: all 0.2s ease; }
+  .checkbox-item.selected .checkbox-box { background: #00e5ff; border-color: #00e5ff; color: #000; }
+  .radio-item.selected .radio-circle { border-color: #00e5ff; }
+  .radio-item.selected .radio-circle::after { background: #00e5ff; }
+  .checkbox-item.correct .checkbox-box, .radio-item.correct .radio-circle { background: #00ff88; border-color: #00ff88; }
+  .radio-item.correct .radio-circle::after { background: #000; }
+  .checkbox-item.wrong .checkbox-box, .radio-item.wrong .radio-circle { background: #ff3c64; border-color: #ff3c64; }
+  .radio-item.wrong .radio-circle::after { background: #fff; }
+  .checkbox-label, .radio-label { font-size: 16px; line-height: 1.4; }
+  .hidden-option { display: none !important; }
+
+  .input-container { display: flex; flex-direction: column; gap: 14px; }
+  .input-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; }
+  .input-number { width: 32px; height: 32px; min-width: 32px; background: rgba(0, 229, 255, 0.2); border: 1px solid rgba(0, 229, 255, 0.5); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: 700; color: #00e5ff; }
+  .input-field { flex: 1; padding: 12px 16px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; color: #fff; font-size: 16px; outline: none; transition: all 0.25s ease; }
+  .input-field:focus { border-color: #00e5ff; box-shadow: 0 0 12px rgba(0, 229, 255, 0.3); }
+  .input-field.correct { border-color: #00ff88; background: rgba(0, 255, 136, 0.1); }
+  .input-field.wrong { border-color: #ff3c64; background: rgba(255, 60, 100, 0.1); }
+  .input-field:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  .check-btn { margin-top: 24px; padding: 16px 32px; background: linear-gradient(135deg, #00e5ff, #b066ff); border: none; border-radius: 14px; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; transition: all 0.3s ease; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4); width: 100%; }
+  .check-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(176, 102, 255, 0.6); }
+  .check-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .feedback-message { margin-top: 18px; padding: 14px 18px; border-radius: 12px; font-size: 16px; font-weight: 600; text-align: center; animation: fadeIn 0.3s ease; display: none; }
+  .feedback-message.show { display: block; }
+  .feedback-message.error { background: rgba(255, 60, 100, 0.2); border: 1px solid rgba(255, 60, 100, 0.5); color: #ffb0be; }
+  .feedback-message.success { background: rgba(0, 255, 136, 0.2); border: 1px solid rgba(0, 255, 136, 0.5); color: #b0ffcc; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .cases-screen, .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 8; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px 20px; background: rgba(5, 10, 30, 0.95); backdrop-filter: blur(10px); overflow-y: auto; }
+  .cases-screen.hidden, .login-screen.hidden { display: none; }
+  .cases-title, .login-title { font-size: 48px; font-weight: 800; background: linear-gradient(90deg, #00e5ff, #b066ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px; text-align: center; }
+  .cases-subtitle, .login-subtitle { font-size: 18px; color: #cde4ff; margin-bottom: 30px; text-align: center; max-width: 600px; line-height: 1.5; }
+  .cases-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 800px; width: 100%; }
+  .case-card { background: rgba(15, 20, 45, 0.8); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 20px; padding: 30px; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(15px); position: relative; overflow: hidden; min-height: 180px; }
+  .case-card:hover:not(.locked) { transform: translateY(-4px); border-color: rgba(0, 229, 255, 0.8); box-shadow: 0 10px 40px rgba(0, 229, 255, 0.3); }
+  .case-card.locked { opacity: 0.5; cursor: not-allowed; border-color: rgba(255, 255, 255, 0.1); }
+  .case-card.completed { border-color: rgba(0, 255, 136, 0.6); background: rgba(0, 255, 136, 0.1); }
+  .case-number { font-size: 13px; color: #00e5ff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; font-weight: 600; }
+  .case-name { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+  .case-desc { font-size: 15px; color: #a0b8d8; line-height: 1.4; }
+  .case-clue { position: absolute; top: 15px; right: 15px; width: 60px; height: 60px; opacity: 0.3; }
+  .case-clue img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.6)); }
+  .case-card.completed .case-clue { opacity: 1; animation: cluePop 0.6s ease; }
+  .case-card.completed .case-clue img { filter: drop-shadow(0 0 15px rgba(0, 255, 136, 0.9)); }
+  .case-lock-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 50px; opacity: 0.6; }
+
+  .login-form { background: rgba(15, 20, 45, 0.8); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 20px; padding: 36px; backdrop-filter: blur(15px); max-width: 450px; width: 100%; }
+  .login-form input { width: 100%; padding: 14px 18px; margin-bottom: 14px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 12px; color: #fff; font-size: 16px; outline: none; transition: all 0.25s ease; }
+  .login-form input:focus { border-color: #00e5ff; box-shadow: 0 0 12px rgba(0, 229, 255, 0.3); }
+  .login-form input::placeholder { color: rgba(255, 255, 255, 0.4); }
+  .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #00e5ff, #b066ff); border: none; border-radius: 12px; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin-bottom: 12px; }
+  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(176, 102, 255, 0.6); }
+  .teacher-btn { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
+  .teacher-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+  .overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; background: rgba(5, 10, 30, 0.95); backdrop-filter: blur(15px); display: none; justify-content: center; align-items: center; flex-direction: column; text-align: center; padding: 30px; overflow-y: auto; }
+  .overlay-screen.show { display: flex; animation: fadeIn 0.5s ease; }
+  .overlay-title { font-size: 64px; font-weight: 800; margin-bottom: 20px; letter-spacing: 2px; }
+  .overlay-title.fail { background: linear-gradient(90deg, #ff3c64, #ff6699); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .overlay-title.success { background: linear-gradient(90deg, #00e5ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .overlay-subtitle { font-size: 20px; color: #cde4ff; margin-bottom: 24px; max-width: 600px; line-height: 1.5; }
+  .overlay-clue { width: 120px; height: 120px; margin-bottom: 24px; animation: cluePop 0.8s ease; }
+  .overlay-clue img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.8)); }
+  .overlay-btn { padding: 16px 40px; background: linear-gradient(135deg, #00e5ff, #b066ff); border: none; border-radius: 30px; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; letter-spacing: 1px; transition: all 0.3s ease; box-shadow: 0 0 30px rgba(0, 229, 255, 0.5); margin: 8px; }
+  .overlay-btn:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(176, 102, 255, 0.8); }
+  .overlay-btn.secondary { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: none; }
+  .overlay-btn.email-btn { background: linear-gradient(135deg, #ff9500, #ff3c64); box-shadow: 0 0 30px rgba(255, 149, 0, 0.5); }
+  .overlay-btn.email-btn:hover { box-shadow: 0 0 50px rgba(255, 60, 100, 0.8); }
+  .overlay-btn.download-btn { background: linear-gradient(135deg, #00ff88, #00e5ff); box-shadow: 0 0 30px rgba(0, 255, 136, 0.5); }
+  .overlay-btn.download-btn:hover { box-shadow: 0 0 50px rgba(0, 255, 136, 0.8); }
+
+  .achievements-container { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin: 20px 0; max-width: 700px; }
+  .achievement { background: rgba(255, 215, 0, 0.15); border: 2px solid rgba(255, 215, 0, 0.5); border-radius: 16px; padding: 14px 18px; min-width: 160px; animation: achievementPop 0.6s ease; text-align: center; }
+  .achievement.locked { background: rgba(100, 100, 100, 0.2); border-color: rgba(100, 100, 100, 0.3); opacity: 0.5; }
+  .achievement-icon { width: 50px; height: 50px; margin: 0 auto 8px; }
+  .achievement-icon img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6)); }
+  .achievement-name { font-size: 13px; font-weight: 700; color: #ffd700; margin-bottom: 4px; }
+  .achievement.locked .achievement-name { color: #888; }
+  .achievement-desc { font-size: 11px; color: #cde4ff; }
+  @keyframes achievementPop { 0% { transform: scale(0) rotate(-180deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+
+  .teacher-panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; background: rgba(5, 10, 30, 0.98); backdrop-filter: blur(15px); display: none; flex-direction: column; padding: 24px; overflow-y: auto; }
+  .teacher-panel.show { display: flex; }
+  .teacher-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(0, 229, 255, 0.3); }
+  .teacher-title { font-size: 28px; font-weight: 800; background: linear-gradient(90deg, #00e5ff, #b066ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .teacher-close { padding: 8px 16px; background: rgba(255, 60, 100, 0.2); border: 1px solid rgba(255, 60, 100, 0.5); color: #fff; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .teacher-close:hover { background: rgba(255, 60, 100, 0.4); }
+  .teacher-actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .teacher-action-btn { padding: 8px 16px; background: rgba(0, 229, 255, 0.2); border: 1px solid rgba(0, 229, 255, 0.5); color: #fff; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s ease; }
+  .teacher-action-btn:hover { background: rgba(0, 229, 255, 0.4); }
+  .teacher-action-btn.danger { background: rgba(255, 60, 100, 0.2); border-color: rgba(255, 60, 100, 0.5); }
+  .teacher-action-btn.danger:hover { background: rgba(255, 60, 100, 0.4); }
+  .teacher-table { width: 100%; border-collapse: collapse; background: rgba(15, 20, 45, 0.5); border-radius: 12px; overflow: hidden; font-size: 13px; }
+  .teacher-table th, .teacher-table td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+  .teacher-table th { background: rgba(0, 229, 255, 0.15); color: #00e5ff; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+  .teacher-table tr:hover { background: rgba(0, 229, 255, 0.05); }
+  .teacher-table .correct-mark { color: #00ff88; font-weight: 700; }
+  .teacher-table .wrong-mark { color: #ff3c64; font-weight: 700; }
+  .teacher-table .expand-btn { background: rgba(0, 229, 255, 0.2); border: none; color: #fff; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+  .teacher-table .expand-btn:hover { background: rgba(0, 229, 255, 0.4); }
+  .teacher-detail { display: none; background: rgba(0, 0, 0, 0.3); padding: 16px; border-radius: 12px; margin-top: 8px; }
+  .teacher-detail.show { display: block; }
+  .teacher-detail-case { margin-bottom: 16px; padding: 12px; background: rgba(15, 20, 45, 0.6); border-radius: 10px; border-left: 3px solid #00e5ff; }
+  .teacher-detail-case-title { font-size: 15px; font-weight: 700; color: #00e5ff; margin-bottom: 8px; }
+  .teacher-detail-q { padding: 6px 0; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+  .teacher-detail-q:last-child { border-bottom: none; }
+  .teacher-detail-q .hints-used { color: #ffd700; font-size: 12px; margin-left: 8px; }
+  .no-data { text-align: center; padding: 30px; color: #8aa8c8; font-size: 16px; }
+
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 25; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: rgba(15, 20, 45, 0.95); border: 1px solid rgba(0, 229, 255, 0.5); border-radius: 20px; padding: 30px; max-width: 380px; width: 90%; }
+  .modal-title { font-size: 22px; font-weight: 700; margin-bottom: 16px; color: #00e5ff; }
+  .modal input { width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 10px; color: #fff; font-size: 15px; outline: none; margin-bottom: 14px; }
+  .modal-buttons { display: flex; gap: 10px; }
+  .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s ease; }
+  .modal-btn.primary { background: linear-gradient(135deg, #00e5ff, #b066ff); color: #fff; }
+  .modal-btn.secondary { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
+  .modal-error { color: #ff3c64; font-size: 13px; margin-bottom: 10px; display: none; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 14px 24px; background: rgba(0, 255, 136, 0.9); color: #000; border-radius: 12px; font-size: 15px; font-weight: 600; z-index: 30; animation: toastIn 0.3s ease; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+  .toast.error { background: rgba(255, 60, 100, 0.9); color: #fff; }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+  .shake { animation: shake 0.5s ease; }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+  @media (max-width: 900px) {
+    .main-container { flex-direction: column; }
+    .side-panel { width: 100%; flex-direction: row; gap: 10px; padding: 16px; }
+    .clue-board { flex-direction: row; flex: 1; }
+    .clue-slot { height: 60px; flex: 1; }
+    .clue-slot img { width: 45px; height: 45px; }
+    .cases-grid { grid-template-columns: 1fr; max-width: 450px; }
+    .question-text { font-size: 19px; }
+    .checkbox-label, .radio-label { font-size: 15px; }
+    .teacher-header { flex-direction: column; gap: 10px; }
+    .drop-zones { gap: 12px; }
+    .draggable-item { font-size: 13px; padding: 8px 12px; }
+    .case-clue { width: 50px; height: 50px; }
+    .overlay-clue { width: 100px; height: 100px; }
+    .achievement-icon { width: 40px; height: 40px; }
+  }
+  @media (max-width: 600px) {
+    .top-bar { padding: 12px 16px; }
+    .game-title { font-size: 16px; order: 1; width: 100%; text-align: center; }
+    .stats-container { order: 2; width: 100%; justify-content: center; }
+    .restart-btn { order: 3; padding: 6px 12px; font-size: 12px; }
+    .question-card { padding: 20px; }
+    .question-text { font-size: 17px; }
+    .overlay-title { font-size: 42px; }
+    .cases-title, .login-title { font-size: 36px; }
+    .teacher-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="animated-bg"><div class="grid-lines"></div></div>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-title"> ДЕТЕКТИВ МЕТОДИКИ</div>
+  <div class="login-subtitle">Интерактивный тренажер по методике обучения иностранному языку</div>
+  <div class="login-form">
+    <input type="text" id="studentFirstName" placeholder="Имя" autocomplete="off">
+    <input type="text" id="studentLastName" placeholder="Фамилия" autocomplete="off">
+    <button class="login-btn" id="startGameBtn">🕵️ Начать расследование</button>
+    <button class="teacher-btn" id="openTeacherBtn">👩‍🏫 Панель преподавателя</button>
+  </div>
+</div>
+
+<div class="cases-screen hidden" id="casesScreen">
+  <div class="cases-title">📁 АРХИВ ДЕЛ</div>
+  <div class="cases-subtitle" id="casesSubtitle">Добро пожаловать, детектив!</div>
+  <div class="cases-grid" id="casesGrid"></div>
+</div>
+
+<div class="top-bar" id="topBar" style="display: none;">
+  <div class="game-title">🔍 ДЕТЕКТИВ МЕТОДИКИ</div>
+  <div class="stats-container">
+    <div class="token-display" id="tokenDisplay">
+      <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_coin.png" alt="Жетоны" class="token-icon">
+      <span id="tokenCount">0</span>
+    </div>
+    <div class="combo-display" id="comboDisplay">
+      <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_combo.png" alt="Комбо" class="combo-icon">
+      <span id="comboCount">0</span>
+    </div>
+    <div class="hearts-container" id="heartsContainer">
+      <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_heart.png" alt="Жизнь" class="heart-icon active" id="heart1">
+      <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_heart.png" alt="Жизнь" class="heart-icon active" id="heart2">
+      <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_heart.png" alt="Жизнь" class="heart-icon active" id="heart3">
+    </div>
+  </div>
+  <button class="restart-btn" id="restartBtn">📁 В меню</button>
+</div>
+
+<div class="main-container" id="mainContainer" style="display: none;">
+  <div class="center-panel">
+    <div class="question-card" id="questionCard">
+      <div class="case-badge" id="caseBadge">ДЕЛО №1</div>
+      <div class="question-number" id="questionNumber">ЗАДАНИЕ 1 / 4</div>
+      <div class="boss-timer" id="bossTimer">
+        <div class="boss-timer-label">⚠️ ВОПРОС-БОСС — ВРЕМЯ ОГРАНИЧЕНО!</div>
+        <div class="boss-timer-bar"><div class="boss-timer-fill" id="bossTimerFill" style="width: 100%;"></div></div>
+        <div class="boss-timer-text" id="bossTimerText">30 сек</div>
+      </div>
+      <div class="question-text" id="questionText"></div>
+      <div class="question-instruction" id="questionInstruction"></div>
+      <div id="questionContent"></div>
+      
+      <div class="hints-container" id="hintsContainer" style="display: none;">
+        <button class="hint-btn" id="hint5050Btn" onclick="useHint('5050')">
+          <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_hint50.png" alt="50/50"> 50 на 50 (2 🪙)
+        </button>
+        <button class="hint-btn" id="hintAdviceBtn" onclick="useHint('advice')">
+          <img src="https://raw.githubusercontent.com/svkol07/metodika/main/ui_hint.png" alt="Совет"> Совет напарника (2 🪙)
+        </button>
+      </div>
+      <div class="hint-text" id="hintTextDisplay"></div>
+
+      <button class="check-btn" id="checkBtn">✓ ПРОВЕРИТЬ</button>
+      <div class="feedback-message" id="feedbackMessage"></div>
+    </div>
+  </div>
+  <div class="side-panel">
+    <div class="side-panel-title">📋 ДОСКА УЛИК</div>
+    <div class="clue-board" id="clueBoard">
+      <div class="clue-slot empty" id="clueSlot1">
+        <img src="https://raw.githubusercontent.com/svkol07/metodika/main/clue1.png" alt="Улика 1" style="display: none;">
+        <span class="clue-slot-label">ДЕЛО 1</span>
+      </div>
+      <div class="clue-slot empty" id="clueSlot2">
+        <img src="https://raw.githubusercontent.com/svkol07/metodika/main/clue2.png" alt="Улика 2" style="display: none;">
+        <span class="clue-slot-label">ДЕЛО 2</span>
+      </div>
+      <div class="clue-slot empty" id="clueSlot3">
+        <img src="https://raw.githubusercontent.com/svkol07/metodika/main/clue3.png" alt="Улика 3" style="display: none;">
+        <span class="clue-slot-label">ДЕЛО 3</span>
+      </div>
+      <div class="clue-slot empty" id="clueSlot4">
+        <img src="https://raw.githubusercontent.com/svkol07/metodika/main/clue4.png" alt="Улика 4" style="display: none;">
+        <span class="clue-slot-label">ДЕЛО 4</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay-screen" id="failScreen">
+  <div class="overlay-title fail">ДЕЛО ПРОВАЛЕНО</div>
+  <div class="overlay-subtitle">Вы допустили слишком много ошибок. Улики утрачены. Попробуйте еще раз!</div>
+  <div>
+    <button class="overlay-btn" id="retryCaseBtn"> Повторить дело</button>
+    <button class="overlay-btn secondary" id="backToMenuBtn">📁 В меню</button>
+  </div>
+</div>
+
+<div class="overlay-screen" id="successScreen">
+  <div class="overlay-clue" id="successClue">
+    <img src="" alt="Улика">
+  </div>
+  <div class="overlay-title success">УЛИКА НАЙДЕНА!</div>
+  <div class="overlay-subtitle" id="successSubtitle">Дело №1 раскрыто!</div>
+  <div class="achievements-container" id="caseAchievements"></div>
+  <div>
+    <button class="overlay-btn" id="nextCaseBtn">➡️ Следующее дело</button>
+    <button class="overlay-btn secondary" id="successMenuBtn">📁 В меню</button>
+  </div>
+</div>
+
+<div class="overlay-screen" id="finalScreen">
+  <div class="overlay-title success">🏆 РАССЛЕДОВАНИЕ ЗАВЕРШЕНО!</div>
+  <div class="overlay-subtitle" id="finalSubtitle">Поздравляем! Вы раскрыли все дела!</div>
+  <div class="achievements-container" id="finalAchievements"></div>
+  
+  <div style="margin: 20px 0; text-align: center; max-width: 500px;">
+    <p style="color: #8aa8c8; font-size: 15px; margin-bottom: 16px; line-height: 1.5;">
+      Отправьте отчёт преподавателю. Сначала скачайте файл, затем прикрепите его к письму.
+    </p>
+    <button class="overlay-btn download-btn" id="studentDownloadBtn" style="width: 100%; margin-bottom: 10px;">📥 Скачать отчёт (.txt)</button>
+    <button class="overlay-btn secondary" id="studentCopyBtn" style="width: 100%; margin-bottom: 10px;">📋 Скопировать отчёт</button>
+    <button class="overlay-btn email-btn" id="studentEmailBtn" style="width: 100%;">📧 Открыть почту для отправки</button>
+    <p style="color: #8aa8c8; font-size: 13px; margin-top: 14px; line-height: 1.4;">
+       Если почта не открывается — скопируйте отчёт и вставьте в письмо вручную на адрес: <strong style="color: #00e5ff;">metodika@university.ru</strong>
+    </p>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button class="overlay-btn" id="finalRestartBtn">🔄 Начать заново</button>
+    <button class="overlay-btn secondary" id="finalMenuBtn">📁 В меню</button>
+  </div>
+</div>
+
+<div class="teacher-panel" id="teacherPanel">
+  <div class="teacher-header">
+    <div class="teacher-title">👩‍ ПАНЕЛЬ ПРЕПОДАВАТЕЛЯ</div>
+    <button class="teacher-close" id="teacherCloseBtn">✕ Закрыть</button>
+  </div>
+  <div class="teacher-actions">
+    <button class="teacher-action-btn" id="exportCsvBtn">📊 Экспорт CSV</button>
+    <button class="teacher-action-btn" id="copyReportBtn"> Копировать отчёт</button>
+    <button class="teacher-action-btn danger" id="clearDataBtn">🗑️ Очистить данные</button>
+  </div>
+  <div id="teacherContent"></div>
+</div>
+
+<div class="modal-overlay" id="passwordModal">
+  <div class="modal">
+    <div class="modal-title">🔐 Вход для преподавателя</div>
+    <div class="modal-error" id="modalError">Неверный пароль</div>
+    <input type="password" id="passwordInput" placeholder="Введите пароль">
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" id="modalCancelBtn">Отмена</button>
+      <button class="modal-btn primary" id="modalConfirmBtn">Войти</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const TEACHER_EMAIL = 'svkol012@gmail.com'; 
+  const TEACHER_PASSWORD = 'svkol07';
+  const STORAGE_KEY = 'detective_methodology_results';
+  const BOSS_TIME = 30;
+
+  const casesData = [
+    {
+      id: 1, title: 'Теоретическая база', desc: 'Основные понятия и категории', clue: 'clue1.png', available: true,
+      questions: [
+        { 
+          type: 'dragdrop', 
+          text: 'Соотнесите термины с их корректными дефинициями.', 
+          instruction: 'Нажмите на термин, а затем на нужную дефиницию (или перетащите мышкой).',
+          categories: [
+            { id: 'cat1', title: 'А. Наименьшая обучающая единица в деятельности преподавателя', correctItems: ['Прием обучения'] },
+            { id: 'cat2', title: 'Б. Изучает закономерности процесса обучения ИЯ независимо от языка', correctItems: ['Общая методика'] },
+            { id: 'cat3', title: 'В. Процесс обучения коммуникативной деятельности на ИЯ', correctItems: ['Объект методики обучения ИЯ'] },
+            { id: 'cat4', title: 'Г. Научное обоснование целей, содержания, методов обучения', correctItems: ['Предмет методики обучения ИЯ'] },
+            { id: 'cat5', title: 'Д. Исследует обучение специфичным языковым явлениям конкретного ИЯ', correctItems: ['Частная методика'] }
+          ],
+          items: ['Объект методики обучения ИЯ', 'Предмет методики обучения ИЯ', 'Общая методика', 'Частная методика', 'Прием обучения'],
+          hintText: 'Объект — это сам процесс обучения. Предмет — это научное обоснование этого процесса.'
+        },
+        { 
+          type: 'multiple', 
+          text: 'В чем заключается специфика предмета «Иностранный язык»?', 
+          instruction: 'Выберите один или несколько правильных ответов.',
+          answers: ['Язык выступает одновременно и как конечная цель обучения, и как основное средство.', 'Предмет относится исключительно к теоретическому циклу.', 'Предмет обладает беспредельностью, что требует строгого отбора языковых минимумов.', 'Обучение полностью исключает выполнение тренировочных упражнений.'],
+          correct: [0, 2],
+          hintText: 'Подумайте о двойственной природе языка на уроке и о невозможности выучить "весь" язык.'
+        },
+        { 
+          type: 'input', 
+          text: 'Рассмотрение методики как самостоятельной науки правомерно потому, что она имеет:', 
+          instruction: 'Впишите пропущенные слова (регистр не важен).',
+          blanks: ['свой ___ исследования', 'свой ___ исследования', 'свои ___ исследования', 'свой ___ аппарат'],
+          correct: [['объект', 'предмет'], ['объект', 'предмет'], 'методы', ['терминологический', 'категориальный']],
+          hintText: 'Вспомните стандартные атрибуты любой научной дисциплины: объект, предмет, методы и терминология.'
+        },
+        { 
+          type: 'multiple', 
+          text: 'Выделите только методы исследования из списка.', 
+          instruction: 'Выберите все правильные варианты.',
+          answers: ['Изучение и систематизация научной литературы', 'Проблемный метод', 'Эксперимент', 'Метод устного опережения Г. Палмера', 'Наблюдение', 'Коммуникативный метод'],
+          correct: [0, 2, 4],
+          hintText: 'Методы исследования — это способы получения новых научных знаний, а не способы обучения учеников.'
+        }
+      ]
+    },
+    {
+      id: 2, title: 'Методы и приемы', desc: 'Принципы обучения и этапы формирования навыков', clue: 'clue2.png', available: true,
+      questions: [
+        { 
+          type: 'dragdrop', 
+          text: 'Распределите принципы обучения по трём группам.', 
+          instruction: 'Нажмите на принцип, а затем на нужную группу (или перетащите).',
+          categories: [
+            { 
+              id: 'catDidactic', 
+              title: '📚 Дидактические принципы', 
+              correctItems: ['научности', 'наглядности', 'сознательности', 'доступности и посильности', 'систематичности и последовательности', 'активности', 'целенаправленности', 'личностной направленности обучения'] 
+            },
+            { 
+              id: 'catMethodical', 
+              title: '🌐 Методические принципы', 
+              correctItems: ['функциональности', 'ситуативности', 'коммуникативной направленности', 'учета особенностей родного языка учащихся'] 
+            },
+            { 
+              id: 'catSpecific', 
+              title: '🎯 Частнометодические принципы', 
+              correctItems: ['обучения на речевых образцах, моделях', 'сочетания языковой тренировки и речевой практики', 'аппроксимации'] 
+            }
+          ],
+          items: [
+            'научности', 'наглядности', 'сознательности', 'доступности и посильности', 
+            'систематичности и последовательности', 'активности', 'целенаправленности', 'личностной направленности обучения',
+            'функциональности', 'ситуативности', 'коммуникативной направленности', 'учета особенностей родного языка учащихся',
+            'обучения на речевых образцах, моделях', 'сочетания языковой тренировки и речевой практики', 'аппроксимации'
+          ],
+          hintText: 'Дидактические принципы универсальны для любого обучения. Методические относятся к методике в целом. Частнометодические касаются конкретных приемов работы с языковым материалом.'
+        },
+        { 
+          type: 'dragdrop', 
+          text: 'Распределите формулировки заданий по этапам формирования навыков.', 
+          instruction: 'Нажмите на задание, а затем на нужный этап (или перетащите).',
+          categories: [
+            { id: 'catA', title: 'А. Ориентировочно-подготовительный', correctItems: ['Повторите хором', 'Обведи окончание глагола', 'Согласись с утверждениями', 'Подчеркните глаголы'] },
+            { id: 'catB', title: 'Б. Стереотипизирующе-ситуативный', correctItems: ['Раскройте скобки', 'Сгруппируйте слова'] },
+            { id: 'catV', title: 'В. Варьирующе-ситуативный', correctItems: ['Составьте диалог по ситуации', 'Расскажи о самом интересном дне'] }
+          ],
+          items: ['Повторите хором', 'Составьте диалог по ситуации', 'Обведи окончание глагола', 'Согласись с утверждениями', 'Расскажи о самом интересном дне', 'Раскройте скобки', 'Сгруппируйте слова', 'Подчеркните глаголы'],
+          hintText: 'Ориентировочный этап — это знакомство и механические действия. Стереотипный — работа по образцу в ситуации. Варьирующий — свободное использование в новой ситуации.'
+        },
+        { 
+          type: 'multiple', 
+          text: 'По тренируемому аспекту выделяются следующие виды навыков:', 
+          instruction: 'Выберите все правильные варианты.',
+          answers: ['Фонетические', 'Лексические', 'Языковые', 'Рецептивные', 'Грамматические', 'Экспрессивные', 'Речевые'],
+          correct: [0, 1, 4],
+          hintText: 'Аспект — это уровень языка: звуки, слова, правила.'
+        },
+        { 
+          type: 'single', 
+          text: 'На каком этапе происходит ознакомление с действием и его первичное освоение?', 
+          instruction: 'Выберите один правильный ответ.',
+          answers: ['Ориентировочно-подготовительный', 'Стереотипизирующе-ситуативный', 'Варьирующе-ситуативный'],
+          correct: 0,
+          hintText: 'Само слово "ознакомление" указывает на начальную, подготовительную стадию.'
+        }
+      ]
+    },
+    {
+      id: 3, title: 'Навыки и умения', desc: 'Виды речевой деятельности', clue: 'clue3.png', available: true,
+      questions: [
+        { 
+          type: 'multiple', 
+          text: 'Какие из следующих утверждений о навыках верны?', 
+          instruction: 'Отметьте все верные утверждения.',
+          answers: ['Экспрессивные навыки используются в говорении и письменной речи.', 'Рецептивные навыки подразумевают автоматизированное распознавание и понимание материала.'],
+          correct: [0, 1],
+          hintText: 'Экспрессивные = создание речи (говорение, письмо). Рецептивные = восприятие речи (аудирование, чтение).'
+        },
+        { 
+          type: 'dragdrop', 
+          text: 'Соотнесите фазу структуры речевой деятельности с её содержанием.', 
+          instruction: 'Нажмите на фазу, а затем на её содержание (или перетащите).',
+          categories: [
+            { id: 'cat1', title: '1. Побудительно-мотивационная', correctItems: ['Проявление потребности в общении'] },
+            { id: 'cat2', title: '2. Аналитико-синтетическая', correctItems: ['Выбор и организация средств, программирование'] },
+            { id: 'cat3', title: '3. Исполнительная', correctItems: ['Звуковое и интонационное оформление мысли'] },
+            { id: 'cat4', title: '4. Контролирующая', correctItems: ['Сигнализирование о возможных ошибках, исправление'] }
+          ],
+          items: ['Проявление потребности в общении', 'Выбор и организация средств, программирование', 'Звуковое и интонационное оформление мысли', 'Сигнализирование о возможных ошибках, исправление'],
+          hintText: 'Сначала возникает мотив (1), затем мозг планирует речь (2), потом речевой аппарат исполняет (3), и мы слушаем себя со стороны (4).'
+        },
+        { 
+          type: 'multiple', 
+          text: 'Какие виды речевой деятельности относятся к РЕЦЕПТИВНЫМ?', 
+          instruction: 'Выберите все правильные варианты.',
+          answers: ['Говорение', 'Аудирование', 'Письменная речь', 'Чтение'],
+          correct: [1, 3],
+          hintText: 'Рецептивные = получение информации извне.'
+        },
+        { 
+          type: 'multiple', 
+          text: 'Отметьте параметры (характеристики) речевого навыка.', 
+          instruction: 'Выберите все подходящие варианты.',
+          answers: ['Автоматизированность', 'Осознанность выполнения каждой операции', 'Устойчивость', 'Творческий характер', 'Гибкость'],
+          correct: [0, 1, 2, 4],
+          hintText: 'Навык по определению автоматизирован, но при этом сохраняет осознанность, устойчивость и гибкость. Творческий характер — это уже уровень умения.'
+        }
+      ]
+    },
+    {
+      id: 4, title: 'Принципы обучения', desc: 'Структура и принципы методики', clue: 'clue4.png', available: true,
+      questions: [
+        { 
+          type: 'single', 
+          text: 'К какому принципу вы отнесете правило: «Как можно чаще используйте вопрос "почему?", чтобы учащиеся научились понимать причинно-следственные связи»?', 
+          instruction: 'Выберите один правильный ответ.',
+          answers: ['Наглядности', 'Сознательности и активности', 'Доступности', 'Связи теории с практикой'],
+          correct: 1,
+          hintText: 'Вопрос "почему?" напрямую обращен к осознанию материала и активной мыслительной деятельности.'
+        },
+        { 
+          type: 'single', 
+          text: 'Реализацию какого принципа обеспечивает правило: «Основное внимание обращается не на форму, а на речевую функцию; предлагаются разнообразные речевые задачи»?', 
+          instruction: 'Выберите один правильный ответ.',
+          answers: ['Опоры на родной язык', 'Активности', 'Интеграции и дифференциации', 'Коммуникативной направленности'],
+          correct: 3,
+          hintText: 'Речевая функция и речевые задачи — это ключевые маркеры коммуникативного подхода.'
+        },
+        { 
+          type: 'multiple', 
+          text: 'Какие утверждения верно характеризуют понятия «интерференция» и «речевой образец»?', 
+          instruction: 'Выберите все правильные варианты.',
+          answers: ['Речевой образец всегда строится на основе отобранной структурной схемы и выполняет коммуникативное задание.', 'Внутриязыковая интерференция возникает исключительно при контакте родного языка с иностранным.', 'Интерференция представляет собой явление отклонений от языковой нормы в результате контактов двух языков.', 'Речевой образец представляет собой наименьшую единицу деятельности преподавателя.'],
+          correct: [0, 2],
+          hintText: 'Интерференция — это негативное влияние одного языка на другой. Речевой образец — это модель для подражания с коммуникативной целью.'
+        },
+        { 
+          type: 'multiple', 
+          text: 'Выберите базовые науки, на которые опирается методика обучения иностранному языку.', 
+          instruction: 'Выберите все правильные варианты (их три).',
+          answers: ['Психология', 'Лингвистика', 'Педагогика', 'Стилистика текста', 'Возрастная психология', 'Философия'],
+          correct: [0, 1, 2],
+          hintText: 'Методика опирается на три фундаментальные науки: науку о языке, науку о воспитании/обучении и науку о психических процессах.'
+        }
+      ]
+    }
+  ];
+
+  const ACHIEVEMENTS = [
+    { id: 'perfect_case', icon: 'achieve1.png', name: 'Идеальное расследование', desc: 'Дело без единой ошибки', check: (stats) => stats.caseMistakes === 0 },
+    { id: 'speed_demon', icon: 'achieve2.png', name: 'Молниеносный ум', desc: 'Босс решён за 15 секунд', check: (stats) => stats.bossTime !== null && stats.bossTime <= 15 },
+    { id: 'analyst', icon: 'achieve3.png', name: 'Сыщик-аналитик', desc: 'Все перетаскивания без ошибок', check: (stats) => stats.dragdropPerfect },
+    { id: 'comeback', icon: 'achieve4.png', name: 'Не сдаётся', desc: 'Восстановился после 2 ошибок в деле', check: (stats) => stats.maxMistakesInRow >= 2 },
+    { id: 'master', icon: 'achieve5.png', name: 'Мастер методики', desc: 'Все 4 дела пройдены', check: (stats) => stats.allCasesCompleted }
+  ];
+
+  let currentCaseIndex = 0, currentQuestionIndex = 0, mistakesInCase = 0;
+  const MAX_MISTAKES = 3;
+  let completedCases = new Set();
+  let isLocked = false, isProcessing = false;
+  let studentName = '', studentFirstName = '', studentLastName = '';
+  let comboCount = 0, maxCombo = 0;
+  let caseMistakes = 0, maxMistakesInRow = 0, currentMistakesInRow = 0;
+  let dragdropPerfect = true, bossTime = null;
+  let bossTimerInterval = null, bossTimeLeft = 0;
+  let caseResults = [];
+  let lastSavedResult = null;
+  let tokens = 0;
+  let selectedDragItem = null;
+  let currentQuestionHints = []; // Подсказки, использованные в текущем вопросе
+
+  const loginScreen = document.getElementById('loginScreen');
+  const casesScreen = document.getElementById('casesScreen');
+  const casesSubtitle = document.getElementById('casesSubtitle');
+  const casesGrid = document.getElementById('casesGrid');
+  const topBar = document.getElementById('topBar');
+  const mainContainer = document.getElementById('mainContainer');
+  const questionCard = document.getElementById('questionCard');
+  const caseBadge = document.getElementById('caseBadge');
+  const questionNumber = document.getElementById('questionNumber');
+  const questionText = document.getElementById('questionText');
+  const questionInstruction = document.getElementById('questionInstruction');
+  const questionContent = document.getElementById('questionContent');
+  const checkBtn = document.getElementById('checkBtn');
+  const feedbackMessage = document.getElementById('feedbackMessage');
+  const bossTimer = document.getElementById('bossTimer');
+  const bossTimerFill = document.getElementById('bossTimerFill');
+  const bossTimerText = document.getElementById('bossTimerText');
+  const tokenDisplay = document.getElementById('tokenDisplay');
+  const tokenCountEl = document.getElementById('tokenCount');
+  const comboDisplay = document.getElementById('comboDisplay');
+  const comboCountEl = document.getElementById('comboCount');
+  const hintsContainer = document.getElementById('hintsContainer');
+  const hint5050Btn = document.getElementById('hint5050Btn');
+  const hintAdviceBtn = document.getElementById('hintAdviceBtn');
+  const hintTextDisplay = document.getElementById('hintTextDisplay');
+  const failScreen = document.getElementById('failScreen');
+  const successScreen = document.getElementById('successScreen');
+  const finalScreen = document.getElementById('finalScreen');
+  const successClue = document.getElementById('successClue');
+  const successSubtitle = document.getElementById('successSubtitle');
+  const caseAchievements = document.getElementById('caseAchievements');
+  const finalAchievements = document.getElementById('finalAchievements');
+  const finalSubtitle = document.getElementById('finalSubtitle');
+  const teacherPanel = document.getElementById('teacherPanel');
+  const teacherContent = document.getElementById('teacherContent');
+  const passwordModal = document.getElementById('passwordModal');
+  const passwordInput = document.getElementById('passwordInput');
+  const modalError = document.getElementById('modalError');
+  const hearts = [document.getElementById('heart1'), document.getElementById('heart2'), document.getElementById('heart3')];
+
+  function showToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function saveResults(result) {
+    try {
+      const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      all.push(result);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    } catch (e) { console.error('Save error:', e); }
+  }
+
+  function getResults() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function clearResults() { localStorage.removeItem(STORAGE_KEY); }
+
+  document.getElementById('startGameBtn').addEventListener('click', () => {
+    studentFirstName = document.getElementById('studentFirstName').value.trim();
+    studentLastName = document.getElementById('studentLastName').value.trim();
+    if (!studentFirstName || !studentLastName) {
+      showToast('Пожалуйста, введите имя и фамилию', true);
+      return;
+    }
+    studentName = `${studentFirstName} ${studentLastName}`;
+    casesSubtitle.textContent = `Добро пожаловать, детектив ${studentFirstName}!`;
+    loginScreen.classList.add('hidden');
+    casesScreen.classList.remove('hidden');
+    renderCasesScreen();
+  });
+
+  document.getElementById('openTeacherBtn').addEventListener('click', () => {
+    passwordModal.classList.add('show');
+    passwordInput.value = '';
+    modalError.style.display = 'none';
+    setTimeout(() => passwordInput.focus(), 100);
+  });
+
+  document.getElementById('modalCancelBtn').addEventListener('click', () => passwordModal.classList.remove('show'));
+  document.getElementById('modalConfirmBtn').addEventListener('click', checkPassword);
+  passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPassword(); });
+
+  function checkPassword() {
+    if (passwordInput.value === TEACHER_PASSWORD) {
+      passwordModal.classList.remove('show');
+      openTeacherPanel();
+    } else {
+      modalError.style.display = 'block';
+      passwordInput.value = '';
+    }
+  }
+
+  document.getElementById('teacherCloseBtn').addEventListener('click', () => teacherPanel.classList.remove('show'));
+
+  function openTeacherPanel() {
+    teacherPanel.classList.add('show');
+    renderTeacherPanel();
+  }
+
+  document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+  document.getElementById('copyReportBtn').addEventListener('click', () => {
+    const text = generateReportText();
+    navigator.clipboard.writeText(text).then(() => showToast('Отчёт скопирован'))
+      .catch(() => showToast('Не удалось скопировать', true));
+  });
+  document.getElementById('clearDataBtn').addEventListener('click', () => {
+    if (confirm('Вы уверены? Все результаты будут удалены безвозвратно!')) {
+      clearResults();
+      renderTeacherPanel();
+      showToast('Данные очищены');
+    }
+  });
+
+  function formatHintsText(hints) {
+    if (!hints || hints.length === 0) return 'без подсказок';
+    const hintNames = hints.map(h => h === '5050' ? '50/50' : 'Совет напарника');
+    return 'подсказки: ' + hintNames.join(', ');
+  }
+
+  function renderTeacherPanel() {
+    const results = getResults();
+    if (results.length === 0) {
+      teacherContent.innerHTML = '<div class="no-data">📭 Пока нет результатов.</div>';
+      return;
+    }
+    let html = '<table class="teacher-table"><thead><tr><th>№</th><th>Студент</th><th>Дата</th><th>Дел</th><th>Ошибок</th><th>Достижения</th><th>Детали</th></tr></thead><tbody>';
+    results.forEach((r, idx) => {
+      const completedCount = r.cases.filter(c => c.completed).length;
+      const totalMistakes = r.cases.reduce((sum, c) => sum + c.mistakes, 0);
+      const achievementsList = r.achievements.map(a => a.icon.split('.')[0]).join(' ');
+      html += `<tr><td>${idx + 1}</td><td><strong>${r.studentName}</strong></td><td>${r.date}</td><td>${completedCount}/4</td><td>${totalMistakes}</td><td>${achievementsList || '—'}</td><td><button class="expand-btn" onclick="toggleDetail(${idx})">👁️</button></td></tr>`;
+    });
+    html += '</tbody></table>';
+    results.forEach((r, idx) => {
+      html += `<div class="teacher-detail" id="detail-${idx}">`;
+      r.cases.forEach(c => {
+        html += `<div class="teacher-detail-case"><div class="teacher-detail-case-title">${c.completed ? '✅' : '❌'} Дело №${c.id}: ${c.title} (ошибок: ${c.mistakes})</div>`;
+        c.questions.forEach((q, qIdx) => {
+          const statusClass = q.correct ? 'correct-mark' : 'wrong-mark';
+          const statusText = q.correct ? '✓ Верно' : '✗ Неверно';
+          const hintsText = q.hints && q.hints.length > 0 
+            ? `<span class="hints-used">💡 ${formatHintsText(q.hints)}</span>` 
+            : '';
+          html += `<div class="teacher-detail-q"><span class="${statusClass}">${statusText}</span> — Вопрос ${qIdx + 1}: «${q.text.substring(0, 50)}...» (попыток: ${q.attempts})${hintsText}</div>`;
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    teacherContent.innerHTML = html;
+  }
+
+  window.toggleDetail = function(idx) {
+    const detail = document.getElementById(`detail-${idx}`);
+    detail.classList.toggle('show');
+  };
+
+  function generateReportText() {
+    const results = getResults();
+    if (results.length === 0) return 'Нет данных.';
+    let text = 'ОТЧЁТ: ДЕТЕКТИВ МЕТОДИКИ\nДата: ' + new Date().toLocaleString('ru-RU') + '\n' + '='.repeat(50) + '\n\n';
+    results.forEach((r, idx) => {
+      text += `${idx + 1}. ${r.studentName} (${r.date})\n`;
+      text += `   Дел: ${r.cases.filter(c => c.completed).length}/4 | Ошибок: ${r.cases.reduce((s, c) => s + c.mistakes, 0)}\n`;
+      r.cases.forEach(c => {
+        text += `   └─ Дело ${c.id}: ${c.completed ? '✅' : '❌'} (ошибок: ${c.mistakes})\n`;
+        c.questions.forEach((q, qIdx) => {
+          const hintsInfo = q.hints && q.hints.length > 0 ? ` [${formatHintsText(q.hints)}]` : '';
+          text += `      ${q.correct ? '✓' : '✗'} В${qIdx + 1}: "${q.text.substring(0, 40)}..." (попыток: ${q.attempts}${hintsInfo})\n`;
+        });
+      });
+      text += '\n';
+    });
+    return text;
+  }
+
+  function generateStudentReportText(result) {
+    let text = `ОТЧЁТ СТУДЕНТА: ${result.studentName}\nДата: ${result.date}\n` + '='.repeat(40) + '\n\n';
+    text += `Пройдено дел: ${result.cases.filter(c => c.completed).length}/4\n`;
+    text += `Всего ошибок: ${result.cases.reduce((s, c) => s + c.mistakes, 0)}\n\n`;
+    if (result.achievements.length > 0) text += `🏆 Достижения: ${result.achievements.map(a => a.name).join(', ')}\n\n`;
+    result.cases.forEach(c => {
+      text += `Дело №${c.id} "${c.title}": ${c.completed ? '✅' : '❌'} (ошибок: ${c.mistakes})\n`;
+      c.questions.forEach((q, qIdx) => {
+        const hintsInfo = q.hints && q.hints.length > 0 ? ` [${formatHintsText(q.hints)}]` : '';
+        text += `  ${q.correct ? '✓' : '✗'} Вопрос ${qIdx + 1}: "${q.text.substring(0, 50)}..." (попыток: ${q.attempts}${hintsInfo})\n`;
+      });
+      text += '\n';
+    });
+    return text;
+  }
+
+  function exportCSV() {
+    const results = getResults();
+    if (results.length === 0) { showToast('Нет данных', true); return; }
+    let csv = '\uFEFF№;Студент;Дата;Дело;Пройдено;Ошибок;Вопрос;Результат;Попыток;Подсказки\n';
+    results.forEach((r, rIdx) => {
+      r.cases.forEach((c) => {
+        c.questions.forEach((q, qIdx) => {
+          const hintsText = q.hints && q.hints.length > 0 ? formatHintsText(q.hints) : 'без подсказок';
+          csv += `${rIdx + 1};${r.studentName};${r.date};${c.id};${c.completed ? 'Да' : 'Нет'};${c.mistakes};${qIdx + 1};${q.correct ? 'Верно' : 'Неверно'};${q.attempts};${hintsText}\n`;
+        });
+      });
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `results_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast('CSV файл скачан');
+  }
+
+  document.getElementById('studentDownloadBtn').addEventListener('click', () => {
+    if (!lastSavedResult) { showToast('Отчёт не найден', true); return; }
+    const text = generateStudentReportText(lastSavedResult);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Otchet_${studentLastName}_${studentFirstName}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 Отчёт скачан! Прикрепите файл к письму.');
+  });
+
+  document.getElementById('studentCopyBtn').addEventListener('click', () => {
+    if (!lastSavedResult) { showToast('Отчёт не найден', true); return; }
+    const text = generateStudentReportText(lastSavedResult);
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('📋 Отчёт скопирован! Вставьте в письмо (Ctrl+V).'))
+      .catch(() => showToast('Не удалось скопировать', true));
+  });
+
+  document.getElementById('studentEmailBtn').addEventListener('click', () => {
+    if (!lastSavedResult) { showToast('Отчёт не найден', true); return; }
+    const subject = encodeURIComponent(`Отчёт по тренажёру: ${studentName}`);
+    const body = encodeURIComponent(`Здравствуйте!\n\nВысылаю отчёт по тренажёру «Детектив Методики».\n\nСтудент: ${studentName}\nДата: ${lastSavedResult.date}\n\nПожалуйста, найдите прикреплённый файл с отчётом.\n\nСпасибо!`);
+    window.location.href = `mailto:${TEACHER_EMAIL}?subject=${subject}&body=${body}`;
+    setTimeout(() => {
+      showToast('📧 Почта открыта. Не забудьте прикрепить скачанный файл!', false);
+    }, 1500);
+  });
+
+  function renderCasesScreen() {
+    casesGrid.innerHTML = '';
+    casesData.forEach((caseItem, index) => {
+      const card = document.createElement('div');
+      card.className = 'case-card';
+      if (!caseItem.available) card.classList.add('locked');
+      if (completedCases.has(caseItem.id)) card.classList.add('completed');
+      card.innerHTML = `
+        <div class="case-number">ДЕЛО №${caseItem.id}</div>
+        <div class="case-name">${caseItem.title}</div>
+        <div class="case-desc">${caseItem.desc}</div>
+        <div class="case-clue">
+          <img src="https://raw.githubusercontent.com/svkol07/metodika/main/${caseItem.clue}" alt="Улика">
+        </div>
+        ${!caseItem.available ? '<div class="case-lock-icon">🔒</div>' : ''}
+      `;
+      if (caseItem.available) card.addEventListener('click', () => startCase(index));
+      casesGrid.appendChild(card);
+    });
+    casesScreen.classList.remove('hidden');
+    mainContainer.style.display = 'none';
+    topBar.style.display = 'none';
+  }
+
+  function startCase(caseIndex) {
+    currentCaseIndex = caseIndex;
+    currentQuestionIndex = 0;
+    mistakesInCase = 0;
+    caseMistakes = 0;
+    maxMistakesInRow = 0;
+    currentMistakesInRow = 0;
+    dragdropPerfect = true;
+    bossTime = null;
+    caseResults = [];
+    currentQuestionHints = [];
+    updateHearts();
+    hideAllOverlays();
+    casesScreen.classList.add('hidden');
+    mainContainer.style.display = 'flex';
+    topBar.style.display = 'flex';
+    renderQuestion();
+  }
+
+  function updateHearts() {
+    hearts.forEach((heart, index) => {
+      if (index < MAX_MISTAKES - mistakesInCase) { 
+        heart.classList.add('active'); 
+        heart.classList.remove('lost'); 
+      } else { 
+        heart.classList.remove('active'); 
+      }
+    });
+  }
+
+  function loseHeart() {
+    const heartIndex = MAX_MISTAKES - 1 - (mistakesInCase - 1);
+    if (heartIndex >= 0 && heartIndex < hearts.length) {
+      hearts[heartIndex].classList.add('lost');
+      setTimeout(() => hearts[heartIndex].classList.remove('lost'), 600);
+    }
+  }
+
+  function updateCombo(correct) {
+    if (correct) {
+      comboCount++;
+      if (comboCount > maxCombo) maxCombo = comboCount;
+      if (comboCount >= 2) {
+        comboCountEl.textContent = comboCount;
+        comboDisplay.classList.add('show');
+      }
+    } else {
+      comboCount = 0;
+      comboDisplay.classList.remove('show');
+    }
+  }
+
+  function startBossTimer() {
+    bossTimeLeft = BOSS_TIME;
+    bossTimer.classList.add('show');
+    updateBossTimerDisplay();
+    bossTimerInterval = setInterval(() => {
+      bossTimeLeft -= 0.1;
+      updateBossTimerDisplay();
+      if (bossTimeLeft <= 0) {
+        clearInterval(bossTimerInterval);
+        bossTimerInterval = null;
+        handleBossTimeout();
+      }
+    }, 100);
+  }
+
+  function updateBossTimerDisplay() {
+    const pct = Math.max(0, (bossTimeLeft / BOSS_TIME) * 100);
+    bossTimerFill.style.width = pct + '%';
+    bossTimerText.textContent = Math.ceil(bossTimeLeft) + ' сек';
+  }
+
+  function stopBossTimer() {
+    if (bossTimerInterval) { clearInterval(bossTimerInterval); bossTimerInterval = null; }
+    bossTimer.classList.remove('show');
+  }
+
+  function handleBossTimeout() {
+    if (isLocked || isProcessing) return;
+    stopBossTimer();
+    bossTime = BOSS_TIME;
+    handleWrong(true);
+  }
+
+  function renderQuestion() {
+    const caseItem = casesData[currentCaseIndex];
+    const q = caseItem.questions[currentQuestionIndex];
+    const isBoss = currentQuestionIndex === caseItem.questions.length - 1;
+
+    caseBadge.textContent = `ДЕЛО №${caseItem.id}: ${caseItem.title.toUpperCase()}`;
+    questionNumber.textContent = `ЗАДАНИЕ ${currentQuestionIndex + 1} / ${caseItem.questions.length}${isBoss ? ' ⚠️ БОСС' : ''}`;
+    questionText.textContent = q.text;
+    questionInstruction.textContent = q.instruction || '';
+    questionContent.innerHTML = '';
+    feedbackMessage.classList.remove('show');
+    feedbackMessage.textContent = '';
+    hintTextDisplay.classList.remove('show');
+    hintTextDisplay.textContent = '';
+    checkBtn.disabled = false;
+    unlockInterface();
+    stopBossTimer();
+
+    // Сбрасываем подсказки для нового вопроса
+    currentQuestionHints = [];
+
+    if (q.type === 'multiple' || q.type === 'single') {
+      hintsContainer.style.display = 'flex';
+      hint5050Btn.disabled = tokens < 2;
+      hintAdviceBtn.disabled = tokens < 2;
+    } else {
+      hintsContainer.style.display = 'none';
+    }
+
+    if (q.type === 'dragdrop') renderDragDrop(q);
+    else if (q.type === 'multiple') renderMultiple(q);
+    else if (q.type === 'single') renderSingle(q);
+    else if (q.type === 'input') renderInput(q);
+
+    if (isBoss) startBossTimer();
+  }
+
+  function renderDragDrop(q) {
+    const container = document.createElement('div');
+    container.className = 'dragdrop-container';
+    
+    const instr = document.createElement('div');
+    instr.className = 'drag-instruction';
+    instr.textContent = '💡 Нажмите на элемент, затем на нужную категорию (или перетащите мышкой).';
+    container.appendChild(instr);
+
+    const zonesContainer = document.createElement('div');
+    zonesContainer.className = 'drop-zones';
+
+    q.categories.forEach(cat => {
+      const zone = document.createElement('div');
+      zone.className = 'drop-zone';
+      zone.dataset.categoryId = cat.id;
+      zone.innerHTML = `<div class="drop-zone-title">${cat.title}</div><div class="dropped-items"></div>`;
+      
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const itemId = e.dataTransfer.getData('text/plain');
+        moveDragItem(itemId, zone);
+      });
+      zone.addEventListener('click', () => {
+        if (selectedDragItem) {
+          moveDragItem(selectedDragItem.id, zone);
+          selectedDragItem.el.classList.remove('selected');
+          selectedDragItem = null;
+        }
+      });
+      
+      zonesContainer.appendChild(zone);
+    });
+    container.appendChild(zonesContainer);
+
+    const pool = document.createElement('div');
+    pool.className = 'draggable-pool';
+    pool.id = 'dragPool';
+    
+    const shuffledItems = [...q.items].sort(() => Math.random() - 0.5);
+    shuffledItems.forEach(itemText => {
+      const item = document.createElement('div');
+      item.className = 'draggable-item';
+      item.draggable = true;
+      item.textContent = itemText;
+      item.dataset.itemText = itemText;
+      item.dataset.id = 'item_' + Math.random().toString(36).substr(2, 9);
+      
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', item.dataset.id);
+        selectedDragItem = { id: item.dataset.id, el: item };
+      });
+      
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.classList.contains('placed')) return;
+        if (selectedDragItem && selectedDragItem.el === item) {
+          item.classList.remove('selected');
+          selectedDragItem = null;
+        } else {
+          if (selectedDragItem) selectedDragItem.el.classList.remove('selected');
+          item.classList.add('selected');
+          selectedDragItem = { id: item.dataset.id, el: item };
+        }
+      });
+      
+      pool.appendChild(item);
+    });
+    container.appendChild(pool);
+    questionContent.appendChild(container);
+  }
+
+  function moveDragItem(itemId, targetZone) {
+    const item = document.querySelector(`.draggable-item[data-id="${itemId}"]`);
+    if (!item || item.classList.contains('placed')) return;
+    
+    const droppedArea = targetZone.querySelector('.dropped-items');
+    droppedArea.appendChild(item);
+    item.classList.add('placed');
+    item.classList.remove('selected');
+    selectedDragItem = null;
+  }
+
+  function checkDragDrop(q) {
+    let allCorrect = true;
+    const zones = questionContent.querySelectorAll('.drop-zone');
+    
+    zones.forEach(zone => {
+      const catId = zone.dataset.categoryId;
+      const category = q.categories.find(c => c.id === catId);
+      const placedItems = zone.querySelectorAll('.draggable-item');
+      
+      if (placedItems.length !== category.correctItems.length) {
+        allCorrect = false;
+        zone.classList.add('wrong');
+      } else {
+        let zoneCorrect = true;
+        placedItems.forEach(item => {
+          if (!category.correctItems.includes(item.dataset.itemText)) {
+            zoneCorrect = false;
+          }
+        });
+        if (zoneCorrect) {
+          zone.classList.add('correct');
+        } else {
+          zone.classList.add('wrong');
+          allCorrect = false;
+          dragdropPerfect = false;
+        }
+      }
+    });
+
+    const pool = document.getElementById('dragPool');
+    if (pool && pool.children.length > 0) {
+      allCorrect = false;
+      dragdropPerfect = false;
+    }
+
+    const items = questionContent.querySelectorAll('.draggable-item');
+    items.forEach(item => item.draggable = false);
+
+    return allCorrect;
+  }
+
+  function renderMultiple(q) {
+    const container = document.createElement('div');
+    container.className = 'checkbox-list';
+    container.dataset.selected = '[]';
+    q.answers.forEach((answer, index) => {
+      const item = document.createElement('div');
+      item.className = 'checkbox-item';
+      item.dataset.index = index;
+      const box = document.createElement('div'); box.className = 'checkbox-box';
+      const label = document.createElement('div'); label.className = 'checkbox-label'; label.textContent = answer;
+      item.appendChild(box); item.appendChild(label);
+      item.addEventListener('click', () => { if (isLocked) return; toggleCheckbox(item, container); });
+      container.appendChild(item);
+    });
+    questionContent.appendChild(container);
+  }
+
+  function toggleCheckbox(item, container) {
+    item.classList.toggle('selected');
+    const selected = Array.from(container.querySelectorAll('.checkbox-item.selected')).map(el => parseInt(el.dataset.index));
+    container.dataset.selected = JSON.stringify(selected);
+  }
+
+  function renderSingle(q) {
+    const container = document.createElement('div');
+    container.className = 'radio-list';
+    container.dataset.selected = '-1';
+    q.answers.forEach((answer, index) => {
+      const item = document.createElement('div');
+      item.className = 'radio-item';
+      item.dataset.index = index;
+      const circle = document.createElement('div'); circle.className = 'radio-circle';
+      const label = document.createElement('div'); label.className = 'radio-label'; label.textContent = answer;
+      item.appendChild(circle); item.appendChild(label);
+      item.addEventListener('click', () => {
+        if (isLocked) return;
+        container.querySelectorAll('.radio-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        container.dataset.selected = index;
+      });
+      container.appendChild(item);
+    });
+    questionContent.appendChild(container);
+  }
+
+  function renderInput(q) {
+    const container = document.createElement('div');
+    container.className = 'input-container';
+    q.blanks.forEach((blank, index) => {
+      const row = document.createElement('div'); row.className = 'input-row';
+      const num = document.createElement('div'); num.className = 'input-number'; num.textContent = index + 1;
+      const field = document.createElement('input'); field.type = 'text'; field.className = 'input-field'; field.placeholder = blank; field.dataset.index = index; field.autocomplete = 'off';
+      row.appendChild(num); row.appendChild(field); container.appendChild(row);
+    });
+    questionContent.appendChild(container);
+  }
+
+  window.useHint = function(hintType) {
+    if (tokens < 2 || isLocked) return;
+    
+    const caseItem = casesData[currentCaseIndex];
+    const q = caseItem.questions[currentQuestionIndex];
+    
+    tokens -= 2;
+    tokenCountEl.textContent = tokens;
+    
+    // Записываем использование подсказки
+    if (!currentQuestionHints.includes(hintType)) {
+      currentQuestionHints.push(hintType);
+    }
+    
+    if (hintType === '5050' && (q.type === 'multiple' || q.type === 'single')) {
+      hint5050Btn.disabled = true;
+      const container = questionContent.querySelector(q.type === 'multiple' ? '.checkbox-list' : '.radio-list');
+      const items = Array.from(container.children);
+      const wrongItems = items.filter(item => !q.correct.includes(parseInt(item.dataset.index)));
+      
+      let removed = 0;
+      for (let item of wrongItems) {
+        if (removed < 2) {
+          item.classList.add('hidden-option');
+          item.classList.add('disabled');
+          removed++;
+        }
+      }
+      showToast('✂️ Два неверных варианта скрыты!');
+    } else if (hintType === 'advice') {
+      hintAdviceBtn.disabled = true;
+      hintTextDisplay.textContent = '💡 ' + (q.hintText || 'Подсказка недоступна для этого задания.');
+      hintTextDisplay.classList.add('show');
+      showToast('💡 Совет напарника получен!');
+    }
+  };
+
+  checkBtn.addEventListener('click', () => {
+    if (isLocked || isProcessing) return;
+    const caseItem = casesData[currentCaseIndex], q = caseItem.questions[currentQuestionIndex];
+    let isCorrect = false;
+    if (q.type === 'dragdrop') isCorrect = checkDragDrop(q);
+    else if (q.type === 'multiple') isCorrect = checkMultiple(q);
+    else if (q.type === 'single') isCorrect = checkSingle(q);
+    else if (q.type === 'input') isCorrect = checkInput(q);
+    
+    if (isCorrect) handleCorrect(); else handleWrong(false);
+  });
+
+  function checkMultiple(q) {
+    const container = questionContent.querySelector('.checkbox-list');
+    const selected = JSON.parse(container.dataset.selected || '[]');
+    const correctSorted = [...q.correct].sort(), selectedSorted = [...selected].sort();
+    const isCorrect = correctSorted.length === selectedSorted.length && correctSorted.every((v, i) => v === selectedSorted[i]);
+    const items = container.querySelectorAll('.checkbox-item');
+    items.forEach(item => {
+      const index = parseInt(item.dataset.index); item.classList.add('disabled');
+      if (q.correct.includes(index)) item.classList.add('correct'); else if (selected.includes(index)) item.classList.add('wrong');
+    });
+    return isCorrect;
+  }
+
+  function checkSingle(q) {
+    const container = questionContent.querySelector('.radio-list');
+    const selected = parseInt(container.dataset.selected);
+    const isCorrect = selected === q.correct;
+    const items = container.querySelectorAll('.radio-item');
+    items.forEach(item => {
+      const index = parseInt(item.dataset.index); item.classList.add('disabled');
+      if (index === q.correct) item.classList.add('correct'); else if (index === selected) item.classList.add('wrong');
+    });
+    return isCorrect;
+  }
+
+  function checkInput(q) {
+    const fields = questionContent.querySelectorAll('.input-field'); let allCorrect = true;
+    fields.forEach((field, index) => {
+      const value = field.value.trim().toLowerCase(), correct = q.correct[index]; let isFieldCorrect = false;
+      if (Array.isArray(correct)) isFieldCorrect = correct.map(c => c.toLowerCase()).includes(value);
+      else isFieldCorrect = value === correct.toLowerCase();
+      if (!isFieldCorrect) allCorrect = false;
+      field.disabled = true;
+      if (isFieldCorrect) field.classList.add('correct'); else field.classList.add('wrong');
+    });
+    return allCorrect;
+  }
+
+  function handleCorrect() {
+    lockInterface(); checkBtn.disabled = true;
+    stopBossTimer();
+    updateCombo(true);
+    currentMistakesInRow = 0;
+    tokens++;
+    tokenCountEl.textContent = tokens;
+
+    const caseItem = casesData[currentCaseIndex];
+    const isBoss = currentQuestionIndex === caseItem.questions.length - 1;
+    if (isBoss) bossTime = BOSS_TIME - bossTimeLeft;
+
+    // Сохраняем результат с учётом подсказок
+    const existingResult = caseResults.find(r => r.qIndex === currentQuestionIndex);
+    if (existingResult) {
+      existingResult.attempts++;
+      existingResult.correct = true;
+      existingResult.hints = [...currentQuestionHints];
+    } else {
+      caseResults.push({ 
+        qIndex: currentQuestionIndex, 
+        text: caseItem.questions[currentQuestionIndex].text, 
+        correct: true, 
+        attempts: 1,
+        hints: [...currentQuestionHints]
+      });
+    }
+
+    feedbackMessage.textContent = `✓ Верно! +1 🪙`;
+    feedbackMessage.className = 'feedback-message show success';
+
+    setTimeout(() => {
+      currentQuestionIndex++;
+      if (currentQuestionIndex >= caseItem.questions.length) completeCase(); else renderQuestion();
+    }, 1500);
+  }
+
+  function handleWrong(isTimeout = false) {
+    lockInterface(); checkBtn.disabled = true;
+    stopBossTimer();
+    updateCombo(false);
+    mistakesInCase++;
+    caseMistakes++;
+    currentMistakesInRow++;
+    if (currentMistakesInRow > maxMistakesInRow) maxMistakesInRow = currentMistakesInRow;
+    loseHeart();
+
+    const caseItem = casesData[currentCaseIndex];
+    const existingResult = caseResults.find(r => r.qIndex === currentQuestionIndex);
+    if (existingResult) { 
+      existingResult.attempts++; 
+      existingResult.correct = false;
+      existingResult.hints = [...currentQuestionHints];
+    }
+    else { 
+      caseResults.push({ 
+        qIndex: currentQuestionIndex, 
+        text: caseItem.questions[currentQuestionIndex].text, 
+        correct: false, 
+        attempts: 1,
+        hints: [...currentQuestionHints]
+      }); 
+    }
+
+    const reason = isTimeout ? '⏰ Время вышло!' : '✗ Неверно!';
+    feedbackMessage.textContent = `${reason} Осталось попыток: ${MAX_MISTAKES - mistakesInCase}`;
+    feedbackMessage.className = 'feedback-message show error';
+
+    questionCard.classList.add('shake');
+    setTimeout(() => questionCard.classList.remove('shake'), 500);
+
+    setTimeout(() => {
+      if (mistakesInCase >= MAX_MISTAKES) failCase(); else { resetQuestionVisuals(); unlockInterface(); checkBtn.disabled = false; }
+    }, 2000);
+  }
+
+  function resetQuestionVisuals() {
+    const caseItem = casesData[currentCaseIndex], q = caseItem.questions[currentQuestionIndex];
+    if (q.type === 'dragdrop') {
+      questionContent.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.classList.remove('correct', 'wrong');
+        const pool = document.getElementById('dragPool');
+        const items = zone.querySelectorAll('.draggable-item');
+        items.forEach(item => {
+          item.classList.remove('placed', 'selected');
+          pool.appendChild(item);
+        });
+      });
+    } else if (q.type === 'multiple') {
+      questionContent.querySelectorAll('.checkbox-item').forEach(item => item.classList.remove('selected', 'correct', 'wrong', 'disabled', 'hidden-option'));
+      const container = questionContent.querySelector('.checkbox-list'); if (container) container.dataset.selected = '[]';
+    } else if (q.type === 'single') {
+      questionContent.querySelectorAll('.radio-item').forEach(item => item.classList.remove('selected', 'correct', 'wrong', 'disabled', 'hidden-option'));
+      const container = questionContent.querySelector('.radio-list'); if (container) container.dataset.selected = '-1';
+    } else if (q.type === 'input') {
+      questionContent.querySelectorAll('.input-field').forEach(field => { field.classList.remove('correct', 'wrong'); field.disabled = false; field.value = ''; });
+    }
+    hintTextDisplay.classList.remove('show');
+    hintTextDisplay.textContent = '';
+    // Кнопки подсказок остаются заблокированными, если они уже использованы
+    hint5050Btn.disabled = tokens < 2 || currentQuestionHints.includes('5050');
+    hintAdviceBtn.disabled = tokens < 2 || currentQuestionHints.includes('advice');
+  }
+
+  function checkAchievements(stats) {
+    return ACHIEVEMENTS.filter(a => a.check(stats));
+  }
+
+  function completeCase() {
+    const caseItem = casesData[currentCaseIndex];
+    completedCases.add(caseItem.id);
+
+    const caseStats = { caseMistakes: caseMistakes, bossTime: bossTime, dragdropPerfect: dragdropPerfect, maxMistakesInRow: maxMistakesInRow, allCasesCompleted: false };
+    const caseAch = checkAchievements(caseStats);
+
+    successClue.querySelector('img').src = `https://raw.githubusercontent.com/svkol07/metodika/main/${caseItem.clue}`;
+    successSubtitle.textContent = `Дело №${caseItem.id} «${caseItem.title}» раскрыто! Вы получили улику.`;
+    renderAchievements(caseAch, caseAchievements);
+    updateClueBoard();
+    successScreen.classList.add('show');
+  }
+
+  function failCase() {
+    const caseItem = casesData[currentCaseIndex];
+    const failResult = {
+      studentName: studentName, date: new Date().toLocaleString('ru-RU'),
+      cases: [{
+        id: caseItem.id, title: caseItem.title, completed: false, mistakes: caseMistakes,
+        questions: caseItem.questions.map((q, i) => {
+          const r = caseResults.find(cr => cr.qIndex === i);
+          return { text: q.text, correct: false, attempts: r ? r.attempts : 0, hints: r ? r.hints : [] };
+        })
+      }], achievements: []
+    };
+    saveResults(failResult);
+    failScreen.classList.add('show');
+  }
+
+  function showFinalScreen() {
+    const finalStats = { caseMistakes: 0, bossTime: null, dragdropPerfect: true, maxMistakesInRow: maxMistakesInRow, allCasesCompleted: true };
+    const finalAch = checkAchievements(finalStats);
+
+    finalSubtitle.textContent = `Поздравляем, ${studentFirstName}! Вы раскрыли все 4 дела!`;
+    renderAchievements(finalAch, finalAchievements);
+
+    lastSavedResult = {
+      studentName: studentName, date: new Date().toLocaleString('ru-RU'),
+      cases: casesData.map(c => ({
+        id: c.id, title: c.title, completed: true, mistakes: 0,
+        questions: c.questions.map(q => ({ text: q.text, correct: true, attempts: 1, hints: [] }))
+      })),
+      achievements: finalAch.map(a => ({ id: a.id, icon: a.icon, name: a.name }))
+    };
+    saveResults(lastSavedResult);
+    finalScreen.classList.add('show');
+  }
+
+  function renderAchievements(achievements, container) {
+    container.innerHTML = '';
+    if (achievements.length === 0) {
+      container.innerHTML = '<div style="color: #8aa8c8; font-size: 14px;">Достижения не получены</div>';
+      return;
+    }
+    achievements.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'achievement';
+      div.innerHTML = `
+        <div class="achievement-icon">
+          <img src="https://raw.githubusercontent.com/svkol07/metodika/main/${a.icon}" alt="${a.name}">
+        </div>
+        <div class="achievement-name">${a.name}</div>
+        <div class="achievement-desc">${a.desc}</div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function updateClueBoard() {
+    for (let i = 1; i <= 4; i++) {
+      const slot = document.getElementById(`clueSlot${i}`);
+      const img = slot.querySelector('img');
+      if (completedCases.has(i)) { 
+        slot.classList.add('filled'); 
+        img.style.display = 'block';
+      } else { 
+        slot.classList.remove('filled'); 
+        img.style.display = 'none';
+      }
+    }
+  }
+
+  document.getElementById('nextCaseBtn').addEventListener('click', () => {
+    let nextIndex = currentCaseIndex + 1;
+    while (nextIndex < casesData.length && !casesData[nextIndex].available) nextIndex++;
+    hideAllOverlays();
+    if (nextIndex < casesData.length && casesData[nextIndex].available) startCase(nextIndex);
+    else showFinalScreen();
+  });
+
+  document.getElementById('retryCaseBtn').addEventListener('click', () => { hideAllOverlays(); startCase(currentCaseIndex); });
+  document.getElementById('backToMenuBtn').addEventListener('click', () => { hideAllOverlays(); renderCasesScreen(); });
+  document.getElementById('successMenuBtn').addEventListener('click', () => { hideAllOverlays(); renderCasesScreen(); });
+  document.getElementById('finalRestartBtn').addEventListener('click', () => { hideAllOverlays(); completedCases.clear(); tokens = 0; tokenCountEl.textContent = 0; renderCasesScreen(); });
+  document.getElementById('finalMenuBtn').addEventListener('click', () => { hideAllOverlays(); completedCases.clear(); tokens = 0; tokenCountEl.textContent = 0; renderCasesScreen(); });
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    if (confirm('Вернуться в меню? Прогресс текущего дела будет потерян.')) {
+      stopBossTimer(); hideAllOverlays(); renderCasesScreen();
+    }
+  });
+
+  function hideAllOverlays() { failScreen.classList.remove('show'); successScreen.classList.remove('show'); finalScreen.classList.remove('show'); }
+  function lockInterface() { isLocked = true; isProcessing = true; }
+  function unlockInterface() { isLocked = false; isProcessing = false; }
+
+  renderCasesScreen();
+})();
+</script>
+</body>
+</html>
